@@ -1,0 +1,6 @@
+__pycache__/
+checkpoints.db
+checkpoints.db-shm
+checkpoints.db-wal
+*.pyc
+.env
