@@ -1,12 +1,12 @@
 from fastmcp import FastMCP
-import sqlite3
-import json
+import sqlite3 #lets us talk to a SQLite database
+import json #lets us convert Python objects to JSON strings
 from datetime import datetime
 
-mcp = FastMCP("tutoring-tools")
+mcp = FastMCP("tutoring-tools") #creates the server and names it 
 
 def get_db():
-    conn = sqlite3.connect("tutoring.db")
+    conn = sqlite3.connect("tutoring.db") #connects to db
     conn.execute("""
         CREATE TABLE IF NOT EXISTS scores (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -29,9 +29,9 @@ def get_db():
         )
     """)
     conn.commit()
-    return conn
+    return conn #hands back connection so tools can use it
 
-@mcp.tool()
+@mcp.tool() #when student finishes a question this tool writes the result to the database. It records who they are, how many qns answered how many attempts and how many hints needed
 def save_score(student_id: str, topic: str, problem: str, score: float, attempts: int, hints_used: int) -> str:
     conn = get_db()
     conn.execute(
@@ -42,7 +42,7 @@ def save_score(student_id: str, topic: str, problem: str, score: float, attempts
     conn.close()
     return f"Score saved for student {student_id}"
 
-@mcp.tool()
+@mcp.tool() #looks up everything a student has done before
 def get_student_history(student_id: str) -> str:
     conn = get_db()
     cursor = conn.execute(
@@ -59,7 +59,7 @@ def get_student_history(student_id: str) -> str:
     ]
     return json.dumps(history)
 
-@mcp.tool()
+@mcp.tool() 
 def save_problem(topic: str, problem: str, answer: str) -> str:
     conn = get_db()
     conn.execute(
@@ -86,4 +86,3 @@ def get_problems_by_topic(topic: str) -> str:
 
 if __name__ == "__main__":
     mcp.run()
-    

@@ -1,16 +1,8 @@
 from langgraph.graph import StateGraph, END
 from state import AgentState
-from langchain_anthropic import ChatAnthropic
-from dotenv import load_dotenv
-import os
 import json
 
-load_dotenv()
-
-llm = ChatAnthropic(
-    model="claude-haiku-4-5-20251001",
-    api_key=os.getenv("ANTHROPIC_API_KEY")
-)
+from llm import llm
 
 import random
 
