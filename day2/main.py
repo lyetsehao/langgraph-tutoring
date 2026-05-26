@@ -3,8 +3,9 @@ from validate_graph import validate_app
 from assess_graph import assess_app
 from hint_graph import hint_app
 from adapt_graph import adapt_app
+from fastmcp import Client
 
-def run_tutoring_system(topic: str):
+async def run_tutoring_system(topic: str, student_id: str):
     state = {
         "topic": topic,
         "problem": "",
@@ -14,28 +15,48 @@ def run_tutoring_system(topic: str):
         "hints_given": []
     }
 
-    # Step 1: Author generates problem and answer
-    print("\n--- Generating problem... ---\n")
-    state = author_app.invoke(state)
+    async with Client("mcp_server.py") as client:
+        # Step 1: Author generates problem and answer
+        print("\n--- Generating problem... ---\n")
+        state = author_app.invoke(state)
 
-    # Step 2: Validate the problem
-    print("\n--- Validating problem... ---\n")
-    state = validate_app.invoke(state)
+        # Step 2: Save problem to database
+        await client.call_tool("save_problem", {
+            "topic": topic,
+            "problem": state["problem"],
+            "answer": state["answer"]
+        })
 
-    # Step 3: Assess loop
-    while True:
-        state = assess_app.invoke(state)
-        latest_score = state["scores"][-1]
+        # Step 3: Validate the problem
+        print("\n--- Validating problem... ---\n")
+        state = validate_app.invoke(state)
 
-        if latest_score >= 0.8:
-            # Step 4: Adapt difficulty
-            state = adapt_app.invoke(state)
-            print("\n--- Well done! ---\n")
-            break
-        else:
-            # Step 4: Give hint and loop back
-            state = hint_app.invoke(state)
+        # Step 4: Assess loop
+        while True:
+            state = assess_app.invoke(state)
+            latest_score = state["scores"][-1]
+
+            if latest_score >= 0.8:
+                # Step 5: Save score to database
+                await client.call_tool("save_score", {
+                    "student_id": student_id,
+                    "topic": topic,
+                    "problem": state["problem"],
+                    "score": latest_score,
+                    "attempts": len(state["submissions"]),
+                    "hints_used": len(state["hints_given"])
+                })
+
+                # Step 6: Adapt difficulty
+                state = adapt_app.invoke(state)
+                print("\n--- Well done! ---\n")
+                break
+            else:
+                # Step 7: Give hint and loop back
+                state = hint_app.invoke(state)
 
 if __name__ == "__main__":
+    import asyncio
     topic = input("Enter a topic: ")
-    run_tutoring_system(topic)
+    student_id = input("Enter your student ID: ")
+    asyncio.run(run_tutoring_system(topic, student_id))
